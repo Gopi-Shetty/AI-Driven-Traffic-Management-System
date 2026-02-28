@@ -9,10 +9,10 @@ Actually, our answer is quite simple when you take it apart. With the help of ca
 to monitor the traffic at intersections from all four directions. The cameras are connected to the 
 software which is very simple in its work - it counts how many cars, bikes, and trucks are waiting 
 at each road. As for the detection, we selected YOLOv5 because it performs well when recognizing 
-vehicles. 
+vehicles. <br>
 You have a choice of video sources - live feeds, pre-recorded footage, uploaded images, or 
 whichever is convenient. The system takes care of everything and gives the vehicle counts for each 
-approach. 
+approach. <br>
 This is where the reason comes in. A longer green light is given to the direction that has many 
 more vehicles than the others. It is as easy as that. We used Flask in the backend for the operations 
 of the numbers and processing. Also, there is a web interface that shows the direction which 
@@ -24,16 +24,17 @@ cities would be able to deploy it in a realistic way. Compared to the old fixed-
 has been around for a long time, this one actually reacts to the real situations rather than just 
 following the schedule blindly. 
 Still, there are some issues that we need to resolve, but it is certainly a step forward compared to 
-what most places are   doing.
+what most places are   doing.<br>
 
-#Objectives: 
+
+# Objectives
 • Creating   an intelligent traffic management system capable of using YOLOv5 for locating 
-and counting the vehicles in real-time from pictures, videos, or even a live webcam feed. 
+and counting the vehicles in real-time from pictures, videos, or even a live webcam feed. <br>
 • Based on the vehicle density at each junction, calculating how long the green signal should 
-be shown and changing it dynamically. 
+be shown and changing it dynamically. <br>
 • Designing a web-based user interface with Flask for the traffic police to visualize, control 
-and monitor the system. 
+and monitor the system. <br>
 • Allowing a traffic management system to have three different methods of data input, i.e. 
-image uploads, video uploads, and live webcam streams. 
+image uploads, video uploads, and live webcam streams. <br>
 • Assessing the system’s functionality through a set of metrics like detection precision, 
-system response speed, computational resource usage, and the ease of user   interaction. 
+system response speed, computational resource usage, and the ease of user   interaction. <br>
