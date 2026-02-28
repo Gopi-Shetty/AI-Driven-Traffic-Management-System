@@ -40,25 +40,25 @@ image uploads, video uploads, and live webcam streams. <br>
 system response speed, computational resource usage, and the ease of user   interaction. <br>
 
 # Strengths of the System: 
-- 1.Real-time Adaptive Traffic Management 
+1.Real-time Adaptive Traffic Management 
 The   system changes the durations of traffic lights depending on the number of cars passing through 
 the lanes. This guarantees the quickest possible clearing of the busiest lanes and a minimum of 
-waiting that is unnecessary for those that are less crowded.  
-- 2. High Scalability 
+waiting that is unnecessary for those that are less crowded.<br> 
+2. High Scalability 
 The design is prepared for the extension of a bigger junction or more lanes without a significant 
 change in structure. The YOLOv5 model and the Flask backend can manage a higher traffic 
-volume and more complex intersections.  
-- 3. Cost-Effective Implementation 
+volume and more complex intersections.<br>
+3. Cost-Effective Implementation 
 The proposal uses the current CCTV facilities and does not require costly hardware such as 
 inductive loops or LIDAR sensors. One standard camera and a mid-range processor are enough 
-for a city-level adoption to be ideal.  
-- 4. User-Friendly Interface 
+for a city-level adoption to be ideal.<br>
+4. User-Friendly Interface 
 The web-based GUI provides: 
 • Real-time signal state visualisation 
 • Vehicle count display 
 • Manual override options for traffic officers 
-• Easy configuration and monitoring 
-- 5. Fast and Efficient Processing 
+• Easy configuration and monitoring <br>
+5. Fast and Efficient Processing 
 Due to optimized inference and very small latency, the system is able to handle each frame rapidly 
 and usually, it is able to give a decision in less than two seconds. This feature guarantees smooth 
-operations even in situations of control in real-time.  
+operations even in situations of control in real-time.<br>  
