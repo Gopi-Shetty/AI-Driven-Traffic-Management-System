@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Traffic Management System</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+            position: relative;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        .road-horizontal, .road-vertical {
+            position: absolute;
+            background-color: #333;
+            z-index: 1;
+        }
+
+        /* Horizontal and Vertical road styles */
+        .road-horizontal {
+            width: 100%;
+            height: 200px;
+        }
+
+        .road-vertical {
+            width: 200px;
+            height: 100%;
+        }
+
+        /* Lane dividers */
+        .road-horizontal::before, .road-vertical::before {
+            content: '';
+            position: absolute;
+            background-color: #fff;
+            z-index: 2;
+        }
+
+        .road-horizontal::before {
+            width: 100%;
+            height: 10px;
+            top: 95px;
+            background: repeating-linear-gradient(
+                to right,
+                #fff,
+                #fff 20px,
+                transparent 20px,
+                transparent 40px
+            );
+        }
+
+        .road-vertical::before {
+            width: 10px;
+            height: 100%;
+            left: 95px;
+            background: repeating-linear-gradient(
+                to bottom,
+                #fff,
+                #fff 20px,
+                transparent 20px,
+                transparent 40px
+            );
+        }
+
+        /* Center circle */
+        .center-circle {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background-color: #00ffff; /* Cyan color */
+            border-radius: 50%;
+            border: 5px solid #000;
+            z-index: 3;
+            top: calc(50% - 75px); /* Center the circle vertically */
+            left: calc(50% - 75px); /* Center the circle horizontally */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #000; /* Black text color for better contrast */
+        }
+
+        /* Junction styles */
+        .junction {
+            position: absolute;
+            width: 105px;
+            height: 105px;
+            background-color: #001aff; /* Blue color for junctions */
+            border: 3px solid #000;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px; /* Larger text */
+            font-weight: bold;
+            color: #fff; /* White text color for better contrast */
+            z-index: 4;
+            transition: background-color 0.5s;
+        }
+
+        .junction.active {
+            background-color: #45a049;
+        }
+
+        .junction.visited {
+            border-color: #ff6600;
+            border-width: 5px;
+        }
+
+        /* Position the junctions */
+        .junction-b {
+            top: calc(50% - 52px); /* Center vertically on the right edge (East) */
+            right: 20px;
+        }
+
+        .junction-c {
+            top: 20px; /* North side */
+            left: calc(50% - 52px); /* Center horizontally on the top edge */
+        }
+
+        .junction-d {
+            top: calc(50% - 52px); /* Center vertically on the left edge (West) */
+            left: 20px;
+        }
+
+        .junction-e {
+            bottom: 20px;
+            left: calc(50% - 52px);
+        }
+
+        /* Traffic light container */
+        .lights-container {
+            display: flex;
+            margin-top: 5px;
+        }
+
+        /* Traffic light styles */
+        .traffic-light {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: grey;
+            margin: 3px;
+            transition: background-color 0.3s;
+        }
+
+        .traffic-light.red.active {
+            background-color: red;
+            box-shadow: 0 0 10px 2px rgba(255, 0, 0, 0.7);
+        }
+
+        .traffic-light.yellow.active {
+            background-color: yellow;
+            box-shadow: 0 0 10px 2px rgba(255, 255, 0, 0.7);
+        }
+
+        .traffic-light.green.active {
+            background-color: lime;
+            box-shadow: 0 0 10px 2px rgba(0, 255, 0, 0.7);
+        }
+
+        /* Countdown timer styles */
+        .countdown {
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 3px;
+        }
+
+        /* Vehicle info styles */
+        .vehicle-info {
+            font-size: 12px;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 3px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 2px 5px;
+            border-radius: 10px;
+        }
+
+        /* Status panel */
+        .status-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            width: 320px;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-title {
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid white;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .system-status {
+            margin-top: 15px;
+        }
+
+        .progress-bar-container {
+            height: 15px;
+            width: 100%;
+            background-color: #333;
+            border-radius: 10px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 10px;
+            transition: width 0.5s;
+        }
+
+        /* Total time panel */
+        .time-panel {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+        }
+
+        /* Next cycle button */
+        .next-cycle-btn {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            display: none; /* Initially hidden */
+        }
+
+        .next-cycle-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Phase indicator */
+        .phase-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+        }
+
+        /* Cars animation */
+        .car {
+            position: absolute;
+            width: 30px;
+            height: 15px;
+            background-color: #e74c3c;
+            border-radius: 3px;
+            z-index: 2;
+            transition: transform 0.1s linear;
+        }
+
+        .car::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            height: 4px;
+            background-color: #f1c40f;
+            top: 0;
+            right: 2px;
+            border-radius: 1px;
+        }
+
+        /* Different car colors */
+        .car-blue { background-color: #3498db; }
+        .car-green { background-color: #2ecc71; }
+        .car-yellow { background-color: #f1c40f; }
+        .car-purple { background-color: #9b59b6; }
+        .car-orange { background-color: #e67e22; }
+    </style>
+</head>
+<body>
+    <div class="road-horizontal"></div>
+    <div class="road-vertical"></div>
+
+    <!-- Center Circle -->
+    <div class="center-circle">A</div>
+
+    <!-- Junction B (East) -->
+    <div class="junction junction-b" id="junction-b">
+        B
+        <div class="lights-container">
+            <div class="traffic-light red" id="red-b"></div>
+            <div class="traffic-light yellow" id="yellow-b"></div>
+            <div class="traffic-light green" id="green-b"></div>
+        </div>
+        <div id="countdown-b" class="countdown">0s</div>
+        <div id="vehicle-b" class="vehicle-info">0 cars</div>
+    </div>
+
+    <!-- Junction C (North) -->
+    <div class="junction junction-c" id="junction-c">
+        C
+        <div class="lights-container">
+            <div class="traffic-light red" id="red-c"></div>
+            <div class="traffic-light yellow" id="yellow-c"></div>
+            <div class="traffic-light green" id="green-c"></div>
+        </div>
+        <div id="countdown-c" class="countdown">0s</div>
+        <div id="vehicle-c" class="vehicle-info">0 cars</div>
+    </div>
+
+    <!-- Junction D (West) -->
+    <div class="junction junction-d" id="junction-d">
+        D
+        <div class="lights-container">
+            <div class="traffic-light red" id="red-d"></div>
+            <div class="traffic-light yellow" id="yellow-d"></div>
+            <div class="traffic-light green" id="green-d"></div>
+        </div>
+        <div id="countdown-d" class="countdown">0s</div>
+        <div id="vehicle-d" class="vehicle-info">0 cars</div>
+    </div>
+
+    <!-- Junction E (South) -->
+    <div class="junction junction-e" id="junction-e">
+        E
+        <div class="lights-container">
+            <div class="traffic-light red" id="red-e"></div>
+            <div class="traffic-light yellow" id="yellow-e"></div>
+            <div class="traffic-light green" id="green-e"></div>
+        </div>
+        <div id="countdown-e" class="countdown">0s</div>
+        <div id="vehicle-e" class="vehicle-info">0 cars</div>
+    </div>
+
+    <!-- Status Panel -->
+    <div class="status-panel">
+        <div class="status-title">Dynamic Traffic Management System</div>
+        <div id="current-status">Initializing system...</div>
+        <div class="system-status">
+            <div><strong>Vehicle Distribution:</strong></div>
+            <div id="junction-b-status">
+                Junction B: 0 vehicles
+                <div class="progress-bar-container">
+                    <div id="progress-b" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="junction-c-status">
+                Junction C: 0 vehicles
+                <div class="progress-bar-container">
+                    <div id="progress-c" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="junction-d-status">
+                Junction D: 0 vehicles
+                <div class="progress-bar-container">
+                    <div id="progress-d" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="junction-e-status">
+                Junction E: 0 vehicles
+                <div class="progress-bar-container">
+                    <div id="progress-e" class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase Indicator -->
+    <div class="phase-indicator" id="phase-indicator">
+        Phase: Waiting for Images
+    </div>
+
+    <!-- Total time panel -->
+    <div class="time-panel">
+        Available Time: <span id="available-time">300</span>s | Allocated: <span id="allocated-time">0</span>s
+    </div>
+
+    <!-- Next cycle button -->
+    <button id="next-cycle-btn" class="next-cycle-btn" onclick="goToNextCycle()">Upload Next Images</button>
+
+    <!-- Cars container -->
+    <div id="cars-container"></div>
+
+    <script>
+        // Configuration
+        const POLL_INTERVAL = 1000; // 1 second
+        const SERVER_URL = "/get_signal_times";
+        const NEXT_CYCLE_URL = "/next_cycle";
+        const MAX_CARS = 40; // Maximum number of animated cars
+        const CAR_COLORS = ['car-blue', 'car-green', 'car-yellow', 'car-purple', 'car-orange'];
+
+        // State variables
+        let signalTimes = [0, 0, 0, 0]; // B, C, D, E
+        let vehicleCounts = [0, 0, 0, 0]; // B, C, D, E
+        let currentGreen = -1;
+        let availableTime = 300;
+        let allocatedTime = 0;
+        let activeCars = [];
+        let countdownIntervals = {};
+        let processingComplete = false;
+        let yellowPhase = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize all traffic lights to red
+            const junctions = ["b", "c", "d", "e"];
+            junctions.forEach(junction => {
+                setLight(junction, "red");
+            });
+
+            // Create some initial animated cars
+            generateInitialCars();
+            
+            // Start car animation
+            //animateCars();
+            
+            // Start polling the server
+            pollServer();
+        });
+
+        // Generate random cars for animation
+        function generateInitialCars() {
+            for (let i = 0; i < 20; i++) {
+                createRandomCar();
+            }
+        }
+
+        // Create a random car at one of the four roads
+        function createRandomCar() {
+            const carElement = document.createElement('div');
+            carElement.className = `car ${CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)]}`;
+            
+            // Random position - either horizontal or vertical road
+            const isHorizontal = Math.random() > 0.5;
+            const position = {};
+            
+            if (isHorizontal) {
+                // Horizontal road (left to right or right to left)
+                position.top = Math.floor(Math.random() * 170) + 15;
+                
+                if (Math.random() > 0.5) {
+                    // Left to right
+                    position.left = -30;
+                    position.direction = 'ltr';
+                    carElement.style.transform = 'rotate(90deg)';
+                } else {
+                    // Right to left
+                    position.left = window.innerWidth;
+                    position.direction = 'rtl';
+                    carElement.style.transform = 'rotate(-90deg)';
+                }
+            } else {
+                // Vertical road (top to bottom or bottom to top)
+                position.left = Math.floor(Math.random() * 170) + 15;
+                
+                if (Math.random() > 0.5) {
+                    // Top to bottom
+                    position.top = -30;
+                    position.direction = 'ttb';
+                } else {
+                    // Bottom to top
+                    position.top = window.innerHeight;
+                    position.direction = 'btt';
+                    carElement.style.transform = 'rotate(180deg)';
+                }
+            }
+            
+            carElement.style.left = `${position.left}px`;
+            carElement.style.top = `${position.top}px`;
+            document.getElementById('cars-container').appendChild(carElement);
+            
+            // Add to active cars
+            activeCars.push({
+                element: carElement,
+                position: position,
+                speed: 1 + Math.random() * 2
+            });
+        }
+
+        // Move cars animation
+        function animateCars() {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            
+            // Process each active car
+            for (let i = activeCars.length - 1; i >= 0; i--) {
+                const car = activeCars[i];
+                
+                // Move car based on direction
+                switch (car.position.direction) {
+                    case 'ltr': // Left to right
+                        car.position.left += car.speed;
+                        if (car.position.left > windowWidth + 30) {
+                            removeCar(i);
+                            continue;
+                        }
+                        break;
+                    case 'rtl': // Right to left
+                        car.position.left -= car.speed;
+                        if (car.position.left < -30) {
+                            removeCar(i);
+                            continue;
+                        }
+                        break;
+                    case 'ttb': // Top to bottom
+                        car.position.top += car.speed;
+                        if (car.position.top > windowHeight + 30) {
+                            removeCar(i);
+                            continue;
+                        }
+                        break;
+                    case 'btt': // Bottom to top
+                        car.position.top -= car.speed;
+                        if (car.position.top < -30) {
+                            removeCar(i);
+                            continue;
+                        }
+                        break;
+                }
+                
+                // Update car position
+                car.element.style.left = `${car.position.left}px`;
+                car.element.style.top = `${car.position.top}px`;
+            }
+            
+            // Add new cars randomly if below max
+            if (activeCars.length < MAX_CARS && Math.random() < 0.05) {
+                createRandomCar();
+            }
+            
+            // Continue animation
+           // requestAnimationFrame(animateCars);
+        }
+
+        // Remove car at specific index
+        function removeCar(index) {
+            activeCars[index].element.remove();
+            activeCars.splice(index, 1);
+        }
+
+        // Poll the server for signal times
+        // Poll the server for signal times
+async function pollServer() {
+    try {
+        const response = await fetch(SERVER_URL);
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data) {
+            console.error("Invalid data received from server");
+            document.getElementById("current-status").textContent = "Error: Invalid data received";
+            setTimeout(pollServer, POLL_INTERVAL);
+            return;
+        }
+
+        // Don't update during active countdown
+        if (Object.values(countdownIntervals).some(interval => interval !== null)) {
+            setTimeout(pollServer, POLL_INTERVAL);
+            return;
+        }
+
+        // Update state with received data
+        if (data.signal_times) {
+            signalTimes = data.signal_times;
+        }
+        
+        if (data.current_green !== undefined) {
+            currentGreen = data.current_green;
+        }
+        
+        if (data.vehicle_counts) {
+            vehicleCounts = data.vehicle_counts;
+        }
+        
+        if (data.available_time !== undefined) {
+            availableTime = data.available_time;
+        }
+        
+        if (data.processing_complete !== undefined) {
+            processingComplete = data.processing_complete;
+        }
+        
+        // Update UI elements
+        updateDisplay();
+        
+        // Schedule next poll
+        setTimeout(pollServer, POLL_INTERVAL);
+    } catch (error) {
+        console.error("Error polling server:", error);
+        document.getElementById("current-status").textContent = `Error: ${error.message}`;
+        setTimeout(pollServer, POLL_INTERVAL * 2); // Retry after double interval on error
+    }
+}
+
+        // Update the vehicle count display
+        function updateVehicleDisplay() {
+            const junctionLabels = ["B", "C", "D", "E"];
+            
+            // Calculate total vehicles for progress bar scaling
+            const totalVehicles = vehicleCounts.reduce((sum, count) => sum + count, 0) || 1; // Avoid division by zero
+            
+            for (let i = 0; i < vehicleCounts.length; i++) {
+                const junctionLetter = junctionLabels[i].toLowerCase();
+                const percentage = (vehicleCounts[i] / totalVehicles) * 100;
+                
+                // Update the vehicle info on junction
+                document.getElementById(`vehicle-${junctionLetter}`).textContent = 
+                    `${vehicleCounts[i]} cars`;
+                
+                // Update the progress bar
+                document.getElementById(`progress-${junctionLetter}`).style.width = `${percentage}%`;
+                
+                // Update the status text
+                document.getElementById(`junction-${junctionLetter}-status`).innerHTML = 
+                    `Junction ${junctionLabels[i]}: ${vehicleCounts[i]} vehicles ${(i === currentGreen) ? '<strong>(ACTIVE)</strong>' : ''}
+                    <div class="progress-bar-container">
+                        <div id="progress-${junctionLetter}" class="progress-bar" style="width: ${percentage}%"></div>
+                    </div>`;
+            }
+        }
+
+        // Update display based on current state
+        function updateDisplay() {
+            const junctionLabels = ["b", "c", "d", "e"];
+
+            // Update available time display
+            document.getElementById("available-time").textContent = availableTime.toFixed(1);
+
+            // Update vehicle display
+            updateVehicleDisplay();
+
+            if (yellowPhase) {
+                // All junctions yellow during waiting phase
+                junctionLabels.forEach(junction => {
+                    setLight(junction, "yellow");
+                });
+                
+                document.getElementById("phase-indicator").textContent = "Phase: Waiting for Uploads";
+                document.getElementById("current-status").textContent = "All signals YELLOW - Waiting for next uploads";
+                
+                // Show the next cycle button
+                document.getElementById("next-cycle-btn").style.display = "block";
+                return;
+            }
+
+            // If processing is complete, update signals
+            if (processingComplete) {
+                // Clear any existing countdowns
+                junctionLabels.forEach(junction => {
+                    if (countdownIntervals[junction]) {
+                        clearInterval(countdownIntervals[junction]);
+                        countdownIntervals[junction] = null;
+                    }
+                    
+                    // Reset all lights to red initially
+                    setLight(junction, "red");
+                    
+                    // Remove active class
+                    document.getElementById(`junction-${junction}`).classList.remove("active");
+                });
+
+                // If we have a valid green junction
+                if (currentGreen >= 0 && currentGreen < 4) {
+                    const greenJunction = junctionLabels[currentGreen];
+                    allocatedTime = signalTimes[currentGreen];
+                    
+                    // Update allocated time display
+                    document.getElementById("allocated-time").textContent = allocatedTime.toFixed(1);
+                    
+                    if (allocatedTime > 0) {
+                        // Set the active junction
+                        document.getElementById(`junction-${greenJunction}`).classList.add("active");
+                        
+                        // Mark as visited visually
+                        document.getElementById(`junction-${greenJunction}`).classList.add("visited");
+                        
+                        // Set green light
+                        setLight(greenJunction, "green");
+                        
+                        // Start countdown
+                        startCountdown(greenJunction, allocatedTime);
+                        
+                        // Update status and phase
+                        document.getElementById("current-status").innerHTML = 
+                            `Junction <strong>${greenJunction.toUpperCase()}</strong> has <span style="color:lime">GREEN</span> signal for <strong>${allocatedTime.toFixed(1)}</strong> seconds`;
+                        document.getElementById("phase-indicator").textContent = "Phase: Green Signal Active";
+                        
+                        // Hide next cycle button during green phase
+                        document.getElementById("next-cycle-btn").style.display = "none";
+                    }
+                } else {
+                    document.getElementById("current-status").textContent = "All signals RED - Calculating next green signal";
+                    document.getElementById("phase-indicator").textContent = "Phase: Calculating Signal Times";
+                    document.getElementById("next-cycle-btn").style.display = "none";
+                }
+            } else {
+                document.getElementById("current-status").textContent = "Waiting for signal time calculation...";
+                document.getElementById("phase-indicator").textContent = "Phase: Processing Images";
+                document.getElementById("next-cycle-btn").style.display = "none";
+            }
+        }
+
+        // Set traffic light color for a junction
+        function setLight(junction, color) {
+            const lights = ["red", "yellow", "green"];
+            
+            // Remove active class from all lights
+            lights.forEach(light => {
+                document.getElementById(`${light}-${junction}`).classList.remove("active");
+            });
+            
+            // Add active class to the specified color
+            document.getElementById(`${color}-${junction}`).classList.add("active");
+        }
+
+        // Start countdown for green junction
+        // Start countdown for green junction
+// Start countdown for green junction
+// Start countdown for green junction
+function startCountdown(junction, timeInSeconds) {
+    const countdownElement = document.getElementById(`countdown-${junction}`);
+    
+    // Initial update
+    countdownElement.textContent = `${timeInSeconds.toFixed(1)}s`;
+    
+    // Clear any existing interval
+    if (countdownIntervals[junction]) {
+        clearInterval(countdownIntervals[junction]);
+    }
+    
+    // Store start time and total duration for calculation
+    const startTime = Date.now();
+    const totalDuration = timeInSeconds * 1000;
+    
+    // Set interval
+    countdownIntervals[junction] = setInterval(() => {
+        // Calculate elapsed time
+        const elapsedTime = Date.now() - startTime;
+        // Calculate remaining time
+        const remainingTime = Math.max(0, (totalDuration - elapsedTime) / 1000);
+        
+        // Update display
+        countdownElement.textContent = `${remainingTime.toFixed(1)}s`;
+        
+        // Check if countdown complete
+        if (remainingTime <= 0.1) { // Small threshold to avoid floating point issues
+            clearInterval(countdownIntervals[junction]);
+            countdownElement.textContent = "0.0s";
+            
+            console.log("Countdown complete for junction: " + junction);
+            
+            // Transition to yellow phase
+            yellowPhase = true;
+            updateDisplay();
+        }
+    }, 1000);
+}
+        // Go to next cycle - called when button is clicked
+        async function goToNextCycle() {
+            try {
+                const response = await fetch(NEXT_CYCLE_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                // Reset yellow phase and redirect to upload page
+                yellowPhase = false;
+                document.getElementById("next-cycle-btn").style.display = "none";
+                window.location.href = "/";
+            } catch (error) {
+                console.error("Error starting next cycle:", error);
+                document.getElementById("current-status").textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

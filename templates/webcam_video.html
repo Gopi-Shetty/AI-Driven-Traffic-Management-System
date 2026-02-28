@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Management - Webcam Video Capture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .webcam-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+        .junction-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .junction-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+        .direction-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .webcam-item {
+            border: 2px solid #ccc;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+        }
+        .direction-label {
+            display: block;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .webcam-container {
+            width: 100%;
+            height: 200px;
+            background-color: #f9f9f9;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        #webcam-video {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+        .video-preview {
+            width: 100%;
+            height: 150px;
+            background-color: #f9f9f9;
+            margin: 15px 0;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        .preview-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .record-btn {
+            background-color: #dc3545;
+        }
+        .record-btn:hover {
+            background-color: #c82333;
+        }
+        .stop-btn {
+            background-color: #ffc107;
+            color: #333;
+            display: none;
+        }
+        .stop-btn:hover {
+            background-color: #e0a800;
+        }
+        .retake-btn {
+            background-color: #6c757d;
+            color: white;
+            display: none;
+        }
+        .retake-btn:hover {
+            background-color: #5a6268;
+        }
+        .submit-container {
+            margin-top: 30px;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+        .submit-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .submit-btn:hover {
+            background-color: #218838;
+        }
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            margin-right: 15px;
+        }
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
+        .info-text {
+            text-align: center;
+            margin: 15px 0;
+            color: #666;
+        }
+        .webcam-setup {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .status-indicator {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .status-pending {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .status-recording {
+            background-color: #dc3545;
+            color: white;
+            animation: blink 1s infinite;
+        }
+        .status-captured {
+            background-color: #28a745;
+            color: white;
+        }
+        .recording-timer {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Traffic Management System - Webcam Video Capture</h1>
+        
+        <div class="info-text">
+            Record traffic videos using your webcam for both incoming and outgoing traffic at junctions: 
+            {% for side in unvisited_sides %}
+                <strong>{{ side.upper() }}</strong>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div class="webcam-setup">
+            <div class="webcam-container">
+                <video id="webcam-video" autoplay playsinline></video>
+            </div>
+            <div id="webcam-status">Waiting for webcam access...</div>
+            <button id="switch-camera" class="btn">Switch Camera</button>
+        </div>
+        
+        <form id="video-form" action="/save_webcam_videos" method="POST" enctype="multipart/form-data">
+            <div class="webcam-grid">
+                {% for side in unvisited_sides %}
+                <div class="junction-container">
+                    <div class="junction-title">Junction {{ side.upper() }}</div>
+                    
+                    <div class="direction-container">
+                        <div class="webcam-item">
+                            <span class="direction-label">Incoming Traffic</span>
+                            <div class="video-preview">
+                                <video class="preview-video" id="incoming_preview_{{ side }}" playsinline></video>
+                            </div>
+                            <div class="recording-timer" id="incoming_timer_{{ side }}">00:00</div>
+                            <div class="status-indicator status-pending" id="incoming_status_{{ side }}">Not recorded</div>
+                            <input type="hidden" name="incoming_video_{{ side }}" id="incoming_video_{{ side }}">
+                            <div class="controls">
+                                <button type="button" class="btn record-btn" id="record_incoming_{{ side }}" onclick="startRecording('incoming', '{{ side }}')">Record</button>
+                                <button type="button" class="btn stop-btn" id="stop_incoming_{{ side }}" onclick="stopRecording('incoming', '{{ side }}')">Stop</button>
+                                <button type="button" class="btn retake-btn" id="retake_incoming_{{ side }}" onclick="retakeRecording('incoming', '{{ side }}')">Retake</button>
+                            </div>
+                        </div>
+                        
+                        <div class="webcam-item">
+                            <span class="direction-label">Outgoing Traffic</span>
+                            <div class="video-preview">
+                                <video class="preview-video" id="outgoing_preview_{{ side }}" playsinline></video>
+                            </div>
+                            <div class="recording-timer" id="outgoing_timer_{{ side }}">00:00</div>
+                            <div class="status-indicator status-pending" id="outgoing_status_{{ side }}">Not recorded</div>
+                            <input type="hidden" name="outgoing_video_{{ side }}" id="outgoing_video_{{ side }}">
+                            <div class="controls">
+                                <button type="button" class="btn record-btn" id="record_outgoing_{{ side }}" onclick="startRecording('outgoing', '{{ side }}')">Record</button>
+                                <button type="button" class="btn stop-btn" id="stop_outgoing_{{ side }}" onclick="stopRecording('outgoing', '{{ side }}')">Stop</button>
+                                <button type="button" class="btn retake-btn" id="retake_outgoing_{{ side }}" onclick="retakeRecording('outgoing', '{{ side }}')">Retake</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="submit-container">
+                    <a href="/" class="back-btn">Back</a>
+                    <button type="submit" class="submit-btn" id="submit-btn">Submit All Videos</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        // Variables for webcam and recording
+        let stream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let currentRecording = null;
+        let recordingTimerId = null;
+        let secondsElapsed = 0;
+        let availableCameras = [];
+        let currentCameraIndex = 0;
+        
+        // Initialize webcam
+        async function initWebcam() {
+            try {
+                // List available video devices
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                availableCameras = devices.filter(device => device.kind === 'videoinput');
+                
+                // Enable or disable camera switching based on available cameras
+                document.getElementById('switch-camera').style.display = 
+                    availableCameras.length > 1 ? 'inline-block' : 'none';
+                
+                // Get camera access
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: true
+                });
+                
+                // Display the stream in the video element
+                const video = document.getElementById('webcam-video');
+                video.srcObject = stream;
+                video.addEventListener('loadedmetadata', () => {
+                    video.play();
+                });
+                
+                document.getElementById('webcam-status').textContent = 'Webcam connected and ready!';
+                document.getElementById('webcam-status').style.color = '#28a745';
+                
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                document.getElementById('webcam-status').textContent = 
+                    'Error accessing webcam. Please ensure camera permissions are granted.';
+                document.getElementById('webcam-status').style.color = '#dc3545';
+            }
+        }
+        
+        // Switch between available cameras
+        async function switchCamera() {
+            if (availableCameras.length <= 1) return;
+            
+            // Stop current stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Switch to next camera
+            currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+            
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: availableCameras[currentCameraIndex].deviceId } },
+                    audio: true
+                });
+                
+                // Update video element
+                const video = document.getElementById('webcam-video');
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Error switching camera:', error);
+            }
+        }
+        
+        // Start recording
+        function startRecording(direction, side) {
+            if (!stream) {
+                alert('Webcam not available. Please check permissions.');
+                return;
+            }
+            
+            // Check if already recording something else
+            if (currentRecording) {
+                alert('Please finish the current recording first.');
+                return;
+            }
+            
+            // Reset for new recording
+            recordedChunks = [];
+            secondsElapsed = 0;
+            
+            // Set current recording info
+            currentRecording = { direction, side };
+            
+            // Update UI
+            document.getElementById(`record_${direction}_${side}`).style.display = 'none';
+            document.getElementById(`stop_${direction}_${side}`).style.display = 'inline-block';
+            document.getElementById(`${direction}_status_${side}`).textContent = 'Recording...';
+            document.getElementById(`${direction}_status_${side}`).className = 'status-indicator status-recording';
+            document.getElementById(`${direction}_timer_${side}`).style.display = 'block';
+            
+            // Start recording timer
+            recordingTimerId = setInterval(updateRecordingTimer, 1000);
+            
+            // Create media recorder
+            const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+            try {
+                mediaRecorder = new MediaRecorder(stream, options);
+            } catch (e) {
+                console.error('MediaRecorder error:', e);
+                // Try with a more basic format
+                try {
+                    mediaRecorder = new MediaRecorder(stream);
+                } catch (e) {
+                    alert('Recording not supported in this browser.');
+                    return;
+                }
+            }
+            
+            // Handle recorded data
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+            
+            // Handle recording stop
+            mediaRecorder.onstop = function() {
+                // Create a blob from the recorded chunks
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                
+                // Create a video URL and show preview
+                const videoUrl = URL.createObjectURL(blob);
+                const previewVideo = document.getElementById(`${direction}_preview_${side}`);
+                previewVideo.src = videoUrl;
+                previewVideo.style.display = 'block';
+                previewVideo.play();
+                
+                // Create a File object to send to server
+                const fileName = `${direction}_${side}_${new Date().getTime()}.webm`;
+                const videoFile = new File([blob], fileName, { type: 'video/webm' });
+                
+                // Create a DataTransfer to set the file input value
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(videoFile);
+                document.getElementById(`${direction}_video_${side}`).files = dataTransfer.files;
+                
+                // Reset current recording
+                currentRecording = null;
+            };
+            
+            // Start recording
+            mediaRecorder.start();
+        }
+        
+        // Stop recording
+        function stopRecording(direction, side) {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+            
+            // Stop the media recorder
+            mediaRecorder.stop();
+            
+            // Stop the timer
+            clearInterval(recordingTimerId);
+            
+            // Update UI
+            document.getElementById(`stop_${direction}_${side}`).style.display = 'none';
+            document.getElementById(`retake_${direction}_${side}`).style.display = 'inline-block';
+            document.getElementById(`${direction}_status_${side}`).textContent = 'Captured';
+            document.getElementById(`${direction}_status_${side}`).className = 'status-indicator status-captured';
+        }
+        
+        // Retake recording
+        function retakeRecording(direction, side) {
+            // Reset UI
+            document.getElementById(`record_${direction}_${side}`).style.display = 'inline-block';
+            document.getElementById(`retake_${direction}_${side}`).style.display = 'none';
+            document.getElementById(`${direction}_status_${side}`).textContent = 'Not recorded';
+            document.getElementById(`${direction}_status_${side}`).className = 'status-indicator status-pending';
+            document.getElementById(`${direction}_timer_${side}`).style.display = 'none';
+            document.getElementById(`${direction}_timer_${side}`).textContent = '00:00';
+            
+            // Clear preview
+            const previewVideo = document.getElementById(`${direction}_preview_${side}`);
+            previewVideo.src = '';
+            previewVideo.style.display = 'none';
+            
+            // Clear file input
+            document.getElementById(`${direction}_video_${side}`).value = '';
+        }
+        
+        // Update recording timer
+        function updateRecordingTimer() {
+            secondsElapsed++;
+            
+            // Format time as MM:SS
+            const minutes = Math.floor(secondsElapsed / 60);
+            const seconds = secondsElapsed % 60;
+            const formattedTime = 
+                (minutes < 10 ? '0' : '') + minutes + ':' + 
+                (seconds < 10 ? '0' : '') + seconds;
+            
+            // Update timer display
+            if (currentRecording) {
+                const { direction, side } = currentRecording;
+                document.getElementById(`${direction}_timer_${side}`).textContent = formattedTime;
+            }
+        }
+        
+        // Submit form validation
+        document.getElementById("video-form").onsubmit = function(event) {
+            // Get all sides from the form
+            const junctions = document.querySelectorAll('.junction-container');
+            let allRecorded = true;
+            
+            // Check if all videos are recorded
+            junctions.forEach(junction => {
+                const sideId = junction.querySelector('.junction-title').textContent.split(' ')[1].toLowerCase();
+                const incomingStatus = document.getElementById(`incoming_status_${sideId}`).textContent;
+                const outgoingStatus = document.getElementById(`outgoing_status_${sideId}`).textContent;
+                
+                if (incomingStatus !== 'Captured' || outgoingStatus !== 'Captured') {
+                    allRecorded = false;
+                }
+            });
+            
+            if (!allRecorded) {
+                alert('Please record videos for all junctions (both incoming and outgoing traffic) before submitting.');
+                event.preventDefault();
+                return false;
+            }
+            
+            return true;
+        };
+        
+        // Handle camera switching
+        document.getElementById('switch-camera').addEventListener('click', switchCamera);
+        
+        // Initialize when page loads
+        window.onload = initWebcam;
+    </script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Management - Webcam Image Capture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .webcam-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+        .junction-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .junction-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+        .direction-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .webcam-item {
+            border: 2px solid #ccc;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+        }
+        .direction-label {
+            display: block;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .webcam-container {
+            width: 100%;
+            height: 200px;
+            background-color: #f9f9f9;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        #webcam-video {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect */
+        }
+        .capture-preview {
+            width: 100%;
+            height: 150px;
+            background-color: #f9f9f9;
+            margin: 15px 0;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+        .preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .capture-btn {
+            background-color: #dc3545;
+        }
+        .capture-btn:hover {
+            background-color: #c82333;
+        }
+        .retake-btn {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .retake-btn:hover {
+            background-color: #e0a800;
+        }
+        .submit-container {
+            margin-top: 30px;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+        .submit-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .submit-btn:hover {
+            background-color: #218838;
+        }
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            margin-right: 15px;
+        }
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
+        .info-text {
+            text-align: center;
+            margin: 15px 0;
+            color: #666;
+        }
+        .webcam-setup {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .status-indicator {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .status-pending {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .status-captured {
+            background-color: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Traffic Management System - Webcam Image Capture</h1>
+        
+        <div class="info-text">
+            Capture traffic images using your webcam for both incoming and outgoing traffic at junctions: 
+            {% for side in unvisited_sides %}
+                <strong>{{ side.upper() }}</strong>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div class="webcam-setup">
+            <div class="webcam-container">
+                <video id="webcam-video" autoplay playsinline></video>
+            </div>
+            <div id="webcam-status">Waiting for webcam access...</div>
+            <button id="switch-camera" class="btn">Switch Camera</button>
+        </div>
+        
+        <div class="webcam-grid">
+            {% for side in unvisited_sides %}
+            <div class="junction-container">
+                <div class="junction-title">Junction {{ side.upper() }}</div>
+                
+                <div class="direction-container">
+                    <div class="webcam-item">
+                        <span class="direction-label">Incoming Traffic</span>
+                        <div class="capture-preview">
+                            <img class="preview-img" id="preview-incoming-{{ side }}" src="#" alt="Preview">
+                        </div>
+                        <button type="button" class="btn capture-btn" onclick="captureImage('incoming-{{ side }}')">Capture Image</button>
+                        <button type="button" class="btn retake-btn" onclick="retakeImage('incoming-{{ side }}')" style="display:none;">Retake</button>
+                        <div class="status-indicator status-pending" id="status-incoming-{{ side }}">Pending capture</div>
+                    </div>
+                    
+                    <div class="webcam-item">
+                        <span class="direction-label">Outgoing Traffic</span>
+                        <div class="capture-preview">
+                            <img class="preview-img" id="preview-outgoing-{{ side }}" src="#" alt="Preview">
+                        </div>
+                        <button type="button" class="btn capture-btn" onclick="captureImage('outgoing-{{ side }}')">Capture Image</button>
+                        <button type="button" class="btn retake-btn" onclick="retakeImage('outgoing-{{ side }}')" style="display:none;">Retake</button>
+                        <div class="status-indicator status-pending" id="status-outgoing-{{ side }}">Pending capture</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <div class="submit-container">
+                <a href="/" class="back-btn">Back</a>
+                <button type="button" id="process-button" class="submit-btn">Process Images</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let stream;
+        let videoTrack;
+        let facingMode = "environment"; // Start with rear camera if available
+        const capturedImages = {};
+        
+        // Initialize webcam
+        async function initializeWebcam() {
+            try {
+                // Close any existing stream
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                
+                // Get new stream
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: facingMode }
+                });
+                
+                // Connect to video element
+                const videoElement = document.getElementById('webcam-video');
+                videoElement.srcObject = stream;
+                
+                // Update status
+                document.getElementById('webcam-status').textContent = 'Webcam active - ready to capture';
+                
+                // Store video track for later use
+                videoTrack = stream.getVideoTracks()[0];
+            } catch (error) {
+                console.error('Error accessing webcam:', error);
+                document.getElementById('webcam-status').textContent = 'Error accessing webcam: ' + error.message;
+            }
+        }
+        
+        // Switch between front and rear cameras
+        document.getElementById('switch-camera').addEventListener('click', () => {
+            facingMode = facingMode === "user" ? "environment" : "user";
+            initializeWebcam();
+        });
+        
+        // Capture image from webcam
+        function captureImage(id) {
+            if (!stream) {
+                alert('Webcam not available. Please allow webcam access and try again.');
+                return;
+            }
+            
+            const videoElement = document.getElementById('webcam-video');
+            const preview = document.getElementById(`preview-${id}`);
+            const captureBtn = document.querySelector(`[onclick="captureImage('${id}')"]`);
+            const retakeBtn = document.querySelector(`[onclick="retakeImage('${id}')"]`);
+            const statusIndicator = document.getElementById(`status-${id}`);
+            
+            // Create canvas to capture video frame
+            const canvas = document.createElement('canvas');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw video frame to canvas (flipped horizontally to correct mirror effect)
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(videoElement, 0, 0);
+            
+            // Get image data URL
+            const imageDataUrl = canvas.toDataURL('image/jpeg');
+            
+            // Set preview image
+            preview.src = imageDataUrl;
+            preview.style.display = 'block';
+            
+            // Store the captured image
+            capturedImages[id] = imageDataUrl;
+            
+            // Update UI
+            captureBtn.style.display = 'none';
+            retakeBtn.style.display = 'inline-block';
+            statusIndicator.textContent = 'Image captured';
+            statusIndicator.classList.remove('status-pending');
+            statusIndicator.classList.add('status-captured');
+        }
+        
+        // Retake image
+        function retakeImage(id) {
+            const preview = document.getElementById(`preview-${id}`);
+            const captureBtn = document.querySelector(`[onclick="captureImage('${id}')"]`);
+            const retakeBtn = document.querySelector(`[onclick="retakeImage('${id}')"]`);
+            const statusIndicator = document.getElementById(`status-${id}`);
+            
+            // Clear preview
+            preview.src = '#';
+            preview.style.display = 'none';
+            
+            // Remove from captured images
+            delete capturedImages[id];
+            
+            // Update UI
+            captureBtn.style.display = 'inline-block';
+            retakeBtn.style.display = 'none';
+            statusIndicator.textContent = 'Pending capture';
+            statusIndicator.classList.add('status-pending');
+            statusIndicator.classList.remove('status-captured');
+        }
+        
+        // Process button click
+        document.getElementById('process-button').addEventListener('click', async () => {
+            // Check if all images are captured
+            const sides = {{ unvisited_sides|tojson }};
+            let allCaptured = true;
+            
+            for (const side of sides) {
+                if (!capturedImages[`incoming-${side}`] || !capturedImages[`outgoing-${side}`]) {
+                    allCaptured = false;
+                    break;
+                }
+            }
+            
+            if (!allCaptured) {
+                if (confirm('Some images are not captured yet. Do you want to continue anyway?')) {
+                    // Continue with processing
+                } else {
+                    return; // Abort processing
+                }
+            }
+            
+            // Send images to server
+            try {
+                const response = await fetch('/save_webcam_images', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(capturedImages)
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success' && result.redirect) {
+                    window.location.href = result.redirect;
+                } else {
+                    alert('Error processing images');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error submitting captured images');
+            }
+        });
+        
+        // Initialize webcam on page load
+        window.addEventListener('load', initializeWebcam);
+    </script>
+</body>
+</html>

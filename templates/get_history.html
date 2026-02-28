@@ -1,0 +1,505 @@
+<!-- Create a new HTML file named traffic_summary.html in the templates folder -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic History Summary</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .card .label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        
+        table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .chart-container {
+            height: 400px;
+            margin: 30px 0;
+        }
+        
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filters select, .filters input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .filters button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        
+        .filters button:hover {
+            background-color: #0056b3;
+        }
+        
+        .back-btn {
+            display: block;
+            margin: 20px auto;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            width: 200px;
+        }
+        
+        .back-btn:hover {
+            background-color: #555;
+        }
+        
+        /* Loading spinner */
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #007bff;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Traffic History Summary</h1>
+        
+        <div class="filters">
+            <div>
+                <label for="date-filter">Date:</label>
+                <input type="date" id="date-filter">
+                
+                <label for="time-range">Time Range:</label>
+                <select id="time-range">
+                    <option value="all">All Times</option>
+                    <option value="morning">Morning (6AM-12PM)</option>
+                    <option value="afternoon">Afternoon (12PM-6PM)</option>
+                    <option value="evening">Evening (6PM-10PM)</option>
+                    <option value="night">Night (10PM-6AM)</option>
+                </select>
+            </div>
+            
+            <button onclick="applyFilters()">Apply Filters</button>
+        </div>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading traffic history data...</p>
+        </div>
+        
+        <div id="summary-content" style="display: none;">
+            <div class="summary-cards">
+                <div class="card">
+                    <div class="value" id="total-records">0</div>
+                    <div class="label">Total Signal Allocations</div>
+                </div>
+                <div class="card">
+                    <div class="value" id="avg-vehicles">0</div>
+                    <div class="label">Average Vehicles Per Cycle</div>
+                </div>
+                <div class="card">
+                    <div class="value" id="busiest-side">-</div>
+                    <div class="label">Most Frequently Allocated Side</div>
+                </div>
+                <div class="card">
+                    <div class="value" id="avg-wait-time">0s</div>
+                    <div class="label">Average Signal Wait Time</div>
+                </div>
+            </div>
+            
+            <h2>Traffic Allocation Distribution</h2>
+            <div id="allocation-chart" class="chart-container"></div>
+            
+            <h2>Vehicle Count Over Time</h2>
+            <div id="vehicle-chart" class="chart-container"></div>
+            
+            <h2>Recent Traffic Allocations</h2>
+            <table id="history-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Unvisited Sides</th>
+                        <th>Vehicles</th>
+                        <th>Allocated Side</th>
+                        <th>Time Given</th>
+                    </tr>
+                </thead>
+                <tbody id="history-data">
+                    <!-- History data rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <a href="/traffic-ui" class="back-btn">Back to Traffic UI</a>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Global variables
+        let historyData = [];
+        let filteredData = [];
+        let allocationChart = null;
+        let vehicleChart = null;
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date-filter').value = today;
+            
+            // Fetch data
+            await fetchHistoryData();
+        });
+        
+        async function fetchHistoryData() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('summary-content').style.display = 'none';
+                
+                const response = await fetch('/get_history');
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                
+                historyData = await response.json();
+                
+                // Apply initial filtering
+                applyFilters();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('summary-content').style.display = 'block';
+            } catch (error) {
+                console.error("Error fetching history data:", error);
+                document.getElementById('loading').innerHTML = `
+                    <p>Error loading data: ${error.message}</p>
+                    <button onclick="fetchHistoryData()">Retry</button>
+                `;
+            }
+        }
+        
+        function applyFilters() {
+            const dateFilter = document.getElementById('date-filter').value;
+            const timeRange = document.getElementById('time-range').value;
+            
+            // Filter by date
+            filteredData = historyData.filter(record => {
+                const recordDate = record.timestamp.split(' ')[0];
+                return !dateFilter || recordDate === dateFilter;
+            });
+            
+            // Filter by time range if not "all"
+            if (timeRange !== 'all') {
+                filteredData = filteredData.filter(record => {
+                    const recordTime = record.timestamp.split(' ')[1];
+                    const hour = parseInt(recordTime.split(':')[0], 10);
+                    
+                    switch (timeRange) {
+                        case 'morning':
+                            return hour >= 6 && hour < 12;
+                        case 'afternoon':
+                            return hour >= 12 && hour < 18;
+                        case 'evening':
+                            return hour >= 18 && hour < 22;
+                        case 'night':
+                            return hour >= 22 || hour < 6;
+                        default:
+                            return true;
+                    }
+                });
+            }
+            
+            // Update the UI with filtered data
+            updateSummaryCards();
+            updateCharts();
+            updateHistoryTable();
+        }
+        
+        function updateSummaryCards() {
+            // Total records
+            document.getElementById('total-records').textContent = filteredData.length;
+            
+            // Average vehicles per cycle
+            const totalVehicles = filteredData.reduce((sum, record) => sum + record.total_vehicles, 0);
+            const avgVehicles = filteredData.length > 0 ? Math.round(totalVehicles / filteredData.length) : 0;
+            document.getElementById('avg-vehicles').textContent = avgVehicles;
+            
+            // Most frequently allocated side
+            const sideCounts = {};
+            filteredData.forEach(record => {
+                sideCounts[record.allocated_side] = (sideCounts[record.allocated_side] || 0) + 1;
+            });
+            
+            let busiestSide = '-';
+            let maxCount = 0;
+            
+            for (const [side, count] of Object.entries(sideCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    busiestSide = side.toUpperCase();
+                }
+            }
+            
+            document.getElementById('busiest-side').textContent = busiestSide;
+            
+            // Average wait time
+            const totalTime = filteredData.reduce((sum, record) => sum + record.allocated_time, 0);
+            const avgTime = filteredData.length > 0 ? Math.round(totalTime / filteredData.length) : 0;
+            document.getElementById('avg-wait-time').textContent = `${avgTime}s`;
+        }
+        
+        function updateCharts() {
+            // Allocation distribution chart
+            const sides = ['b', 'c', 'd', 'e'];
+            const sideColors = {
+                'b': 'rgba(255, 99, 132, 0.7)',
+                'c': 'rgba(54, 162, 235, 0.7)',
+                'd': 'rgba(255, 206, 86, 0.7)',
+                'e': 'rgba(75, 192, 192, 0.7)'
+            };
+            
+            const allocationData = sides.map(side => {
+                return filteredData.filter(record => record.allocated_side === side).length;
+            });
+            
+            const ctx1 = document.getElementById('allocation-chart').getContext('2d');
+            
+            if (allocationChart) {
+                allocationChart.destroy();
+            }
+            
+            allocationChart = new Chart(ctx1, {
+                type: 'pie',
+                data: {
+                    labels: sides.map(s => `Junction ${s.toUpperCase()}`),
+                    datasets: [{
+                        data: allocationData,
+                        backgroundColor: sides.map(s => sideColors[s]),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Signal Allocation Distribution'
+                        }
+                    }
+                }
+            });
+            
+            // Vehicle count over time chart
+            // Sort data chronologically
+            const sortedData = [...filteredData].sort((a, b) => 
+                new Date(a.timestamp) - new Date(b.timestamp)
+            );
+            
+            // Get timestamps and vehicle counts for each side
+            const labels = sortedData.map(record => {
+                const time = record.timestamp.split(' ')[1];
+                return time.substring(0, 5); // HH:MM format
+            });
+            
+            const datasets = sides.map(side => {
+                const data = sortedData.map(record => {
+                    return record.vehicles_count[side] || 0;
+                });
+                
+                return {
+                    label: `Junction ${side.toUpperCase()}`,
+                    data: data,
+                    borderColor: sideColors[side],
+                    backgroundColor: sideColors[side].replace('0.7', '0.1'),
+                    borderWidth: 2,
+                    tension: 0.3
+                };
+            });
+            
+            const ctx2 = document.getElementById('vehicle-chart').getContext('2d');
+            
+            if (vehicleChart) {
+                vehicleChart.destroy();
+            }
+            
+            vehicleChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Vehicle Count'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Vehicle Count Over Time'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateHistoryTable() {
+            const historyTable = document.getElementById('history-data');
+            historyTable.innerHTML = '';
+            
+            // Reverse the array to show newest records first
+            const sortedHistory = [...filteredData].reverse().slice(0, 20); // Show last 20 records
+            
+            if (sortedHistory.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 5;
+                cell.textContent = 'No traffic history data available for the selected filters';
+                cell.style.textAlign = 'center';
+                row.appendChild(cell);
+                historyTable.appendChild(row);
+                return;
+            }
+            
+            sortedHistory.forEach((record, index) => {
+                const row = document.createElement('tr');
+                
+                // Format time (show only HH:MM:SS)
+                const timeCell = document.createElement('td');
+                const time = record.timestamp.split(' ')[1];
+                timeCell.textContent = time;
+                row.appendChild(timeCell);
+                
+                // Unvisited sides
+                const unvisitedCell = document.createElement('td');
+                unvisitedCell.textContent = record.unvisited_sides.join(', ').toUpperCase();
+                row.appendChild(unvisitedCell);
+                
+                // Vehicles count
+                // Vehicles count
+                const vehiclesCell = document.createElement('td');
+                let vehiclesText = '';
+                for (const [side, count] of Object.entries(record.vehicles_count)) {
+                    vehiclesText += `${side.toUpperCase()}: ${count}, `;
+                }
+                vehiclesCell.textContent = vehiclesText.slice(0, -2); // Remove trailing comma and space
+                row.appendChild(vehiclesCell);
+                
+                // Allocated side
+                const allocatedSideCell = document.createElement('td');
+                allocatedSideCell.textContent = record.allocated_side.toUpperCase();
+                row.appendChild(allocatedSideCell);
+                
+                // Time given
+                const timeGivenCell = document.createElement('td');
+                timeGivenCell.textContent = `${record.allocated_time} seconds`;
+                row.appendChild(timeGivenCell);
+                
+                historyTable.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
