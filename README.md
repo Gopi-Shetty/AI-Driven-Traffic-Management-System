@@ -25,3 +25,15 @@ has been around for a long time, this one actually reacts to the real situations
 following the schedule blindly. 
 Still, there are some issues that we need to resolve, but it is certainly a step forward compared to 
 what most places are   doing.
+
+#Objectives: 
+• Creating   an intelligent traffic management system capable of using YOLOv5 for locating 
+and counting the vehicles in real-time from pictures, videos, or even a live webcam feed. 
+• Based on the vehicle density at each junction, calculating how long the green signal should 
+be shown and changing it dynamically. 
+• Designing a web-based user interface with Flask for the traffic police to visualize, control 
+and monitor the system. 
+• Allowing a traffic management system to have three different methods of data input, i.e. 
+image uploads, video uploads, and live webcam streams. 
+• Assessing the system’s functionality through a set of metrics like detection precision, 
+system response speed, computational resource usage, and the ease of user   interaction. 
